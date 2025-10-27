@@ -47,10 +47,16 @@ const passwordForm = reactive({
 const router = useRouter();
 
 const validatePass = (rule, value, callback) => {
-  if (value === '') {
-    callback(new Error('请输入新密码'));
-  } else if (value.length < 6) {
-    callback(new Error('密码长度不能少于6位'));
+if (value === '') {
+    callback(new Error('请输入新密码(密码至少8个字符，包含大小写字母和数字)'));
+  } else if (value.length < 8) { 
+    callback(new Error('密码长度不能少于 8 位'));
+  } else if (!/\d/.test(value)) { 
+    callback(new Error('密码必须包含数字'));
+  } else if (!/[a-z]/.test(value)) { 
+    callback(new Error('密码必须包含小写字母'));
+  } else if (!/[A-Z]/.test(value)) { 
+    callback(new Error('密码必须包含大写字母'));
   } else if (value === passwordForm.oldPassword) {
     callback(new Error('新密码不能与旧密码相同!'));
   } else {
@@ -106,13 +112,18 @@ const submitForm = () => {
         if (response.data.code === 200) {
           ElMessage.success(response.data.message);
           resetForm();
-          // Optionally, redirect to login or dashboard after successful password change
           router.push('/login');
         } else {
           ElMessage.error(response.data.message);
         }
       } catch (error) {
-        const errorMsg = error.response?.data?.message || '密码修改失败，请稍后再试';
+        console.error('密码修改失败:', error.response?.data);
+        let errorMsg = '密码修改失败，请稍后再试';
+        if (error.response?.data?.message) {
+            errorMsg = error.response.data.message;
+        } else if (error.response?.data?.newPassword) {
+            errorMsg = error.response.data.newPassword[0];
+        }
         ElMessage.error(errorMsg);
       }
     } else {

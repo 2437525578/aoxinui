@@ -18,10 +18,8 @@
             <i class="el-icon-location"></i>
             <span>系统用户</span>
           </template>
-          <el-menu-item index="/users/admin">管理员</el-menu-item>
           <el-menu-item index="/users/teacher">负责教师</el-menu-item>
           <el-menu-item index="/users/student">学生用户</el-menu-item>
-          <el-menu-item index="/user-management">用户管理</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="chemicals-encyclopedia">
           <template #title>
@@ -29,7 +27,6 @@
             <span slot="title">危化品百科管理</span>
           </template>
           <el-menu-item index="/chemicals/encyclopedia">危化品百科列表</el-menu-item>
-          <el-menu-item index="/chemicals/encyclopedia/add">危化品百科添加</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/chemicals/warehouse">
           <i class="el-icon-setting"></i>
@@ -119,8 +116,8 @@ import { ref, onMounted } from 'vue';
 const router = useRouter();
 const username = ref('');
 
-onMounted(() => {
-  username.value = localStorage.getItem('username') || '用户';
+onMounted(() => {  
+  username.value = localStorage.getItem('username') || sessionStorage.getItem('username') || '用户';
 });
 
 const handleCommand = (command) => {
@@ -132,7 +129,9 @@ const handleCommand = (command) => {
     localStorage.removeItem('rememberedPassword');
     localStorage.removeItem('autoLoginEnabled');
     localStorage.removeItem('autoLoginExpiration');
-    sessionStorage.clear(); // Clear all sessionStorage
+    sessionStorage.removeItem('username'); 
+    sessionStorage.removeItem('authToken'); 
+    sessionStorage.removeItem('userRole');
     ElMessage.success('退出登录成功！');
     router.push('/login');
   } else if (command === 'changePassword') {

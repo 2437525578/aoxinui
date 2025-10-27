@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '../views/MainLayout.vue'
-
+import { useAuthStore } from '@/stores/auth'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -44,19 +44,8 @@ const router = createRouter({
           component: () => import('../views/ChangePassword.vue')
         },
         {
-          path: 'user-management',
-          name: 'user-management',
-          component: () => import('../views/UserManagement.vue')
-        },
-        {
           path: 'users',
-          component: () => import('../views/Users.vue'), 
           children: [
-            {
-              path: 'admin',
-              name: 'users-admin',
-              component: () => import('../views/UsersAdmin.vue')
-            },
             {
               path: 'teacher',
               name: 'users-teacher',
@@ -78,11 +67,7 @@ const router = createRouter({
         name: 'chemicals-encyclopedia',
         component: () => import('../views/ChemicalsEncyclopedia.vue')
       },
-      {
-        path: 'encyclopedia/add',
-        name: 'chemicals-encyclopedia-add',
-        component: () => import('../views/ChemicalAdd.vue')
-      },
+
             {
               path: 'warehouse',
               name: 'chemicals-warehouse',
@@ -170,9 +155,10 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const publicPages = ['/login', '/forgot-password', '/register'];
+  const publicPages = ['/login', '/forgot-password', '/register','/reset-password'];
   const authRequired = !publicPages.includes(to.path);
-  const loggedIn = localStorage.getItem('authToken');
+  const authStore = useAuthStore();
+  const loggedIn = authStore.isAuthenticated;
 
   // trying to access a restricted page + not logged in
   if (authRequired && !loggedIn) {

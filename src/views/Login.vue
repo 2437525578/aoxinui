@@ -44,9 +44,10 @@ import { useRouter } from 'vue-router'
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Picture } from '@element-plus/icons-vue'
-
+import { useAuthStore } from '@/stores/auth';
+import { jwtDecode } from 'jwt-decode';
 const router = useRouter()
-
+const authStore = useAuthStore();
 const loginFormRef = ref(null)
 const loginForm = reactive({
   username: '',
@@ -64,10 +65,6 @@ const loginRules = reactive({
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' },
   ],
-  // captcha: [
-  //   { required: true, message: '请输入验证码', trigger: 'blur' },
-  //   { len: 4, message: '验证码长度为 4 个字符', trigger: 'blur' },
-  // ],
 })
 
 const loading = ref(false)
@@ -91,7 +88,6 @@ const submitForm = (formEl) => {
     if (valid) {
       loading.value = true
       try {
-        // 调用原有的 login 方法，但需要修改其参数以适应新的 loginForm
         await login(loginForm.username, loginForm.password, loginForm.captcha)
       } finally {
         loading.value = false
@@ -105,46 +101,53 @@ const submitForm = (formEl) => {
 
 // src/views/Login.vue
 
-const login = async (username, password, captcha) => {
+const login = async (username, password) => {
   try {
-    // 1. 发送请求 (确保移除了 captcha)
     const res = await axios.post('http://127.0.0.1:8001/api/user/login/', {
       username: username,
       password: password,
     });
 
-    // 2. 检查新的响应格式：res.data.code
     if (res.data.code === 200) {
-      ElMessage.success('登录成功！'); // 正确的成功提示
-      // 3. 存储 Token 和用户信息
-      localStorage.setItem('authToken', res.data.token);
-      localStorage.setItem('username', res.data.username); 
-      localStorage.setItem('userRole', res.data.role);
+      ElMessage.success('登录成功！');
 
-      // 4. 记住密码逻辑 (保持不变)
-      if (loginForm.rememberPassword) {
-        localStorage.setItem('rememberedUsername', username);
-      } else {
-        localStorage.removeItem('rememberedUsername');
-      }
-      
-      // 5. 跳转
+      // 从响应或 Token 中提取用户信息
+      // 注意：从 Access Token 解码 user_id 可能不是最佳实践，最好后端直接返回必要信息
+      // 但如果后端只返回了 username 和 role，我们可以这样构造
+       let userInfo = {
+           username: res.data.username,
+           role: res.data.role,
+           id: null // 如果后端不返回 ID，可以先设为 null
+       };
+       // 尝试从 token 解码 user_id (如果 SIMPLE_JWT 配置了包含 user_id)
+       try {
+           const decoded = jwtDecode(res.data.token);
+           if (decoded.user_id) {
+               userInfo.id = decoded.user_id;
+           }
+       } catch (decodeError) {
+           console.error("无法从 token 解码 user_id:", decodeError);
+       }
+
+
+      // 调用 store action 保存认证信息
+      authStore.setAuthInfo(res.data.token, userInfo, loginForm.rememberPassword);
+
+      console.log("准备跳转到 /dashboard..."); // 可以保留调试
       router.push('/dashboard');
+      console.log("router.push 已调用"); // 可以保留调试
 
     } else {
-      // 理论上 axios 的 try/catch 会捕获 401，但以防万一
       ElMessage.error(res.data.message || '登录失败');
     }
 
   } catch (error) {
-    // 6. 捕获 401 (Unauthorized) 错误
     if (error.response && error.response.status === 401) {
       ElMessage.error('用户名或密码错误');
     } else {
       ElMessage.error('登录请求失败，请检查网络');
-      console.error(error); // 打印完整错误
+      console.error(error);
     }
-    // refreshCaptcha() // 验证码逻辑
   }
 };
 </script>
